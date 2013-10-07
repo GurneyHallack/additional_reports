@@ -552,11 +552,23 @@ class tx_additionalreports_main {
 			foreach ($items as $itemKey => $itemValue) {
 				if (preg_match('/.*?\/.*?\.php/', $itemKey, $matches)) {
 					foreach ($itemValue as $hookName => $hookList) {
-						$markersArrayTemp[] = array(
-							'###COREFILE###' => $itemKey,
-							'###NAME###'     => $hookName,
-							'###FILE###'     => tx_additionalreports_util::viewArray($hookList)
-						);
+                                            if(is_array($hookList)){
+                                                foreach ($hookList as $key => $value) {
+                                                    if(tx_additionalreports_util::isHook($value) === FALSE){
+                                                        unset($hookList[$key]);
+                                                    }
+                                                }
+                                            } else if(tx_additionalreports_util::isHook($hookList) === FALSE) {
+                                                $hookList = NULL;
+                                            }
+                                            
+                                            if (!empty($hookList)) {
+                                                    $markersArrayTemp[] = array(
+                                                                '###COREFILE###' => $itemKey,
+                                                                '###NAME###'     => $hookName,
+                                                                '###FILE###'     => tx_additionalreports_util::viewArray($hookList)
+                                                        );
+                                            }
 					}
 				}
 			}
@@ -590,53 +602,15 @@ class tx_additionalreports_main {
 
                                 if ($dimensionnal === FALSE) {
                                     foreach ($hookList as $key => $value) {
-                                        $classExist = FALSE;
-                                        //Check if namespace and class exists
-                                        if (strpos($value, "\\") !== FALSE && class_exists($value)) {
-                                            $classExist = TRUE;
-                                        }
-
-                                        //Check if source php is set and exist
-                                        if ($classExist === FALSE && strpos($value, ".php") !== FALSE) {
-                                            $valueArray = split(".php", $value);
-                                            if (!empty($valueArray) && is_array($valueArray)) {
-                                                $file = \TYPO3\CMS\Core\Utility\GeneralUtility::getFileAbsFileName($valueArray[0].".php");
-                                                if (file_exists($file)) {
-                                                    $classExist = TRUE;
-                                                }
-                                            }
-                                        }
-
-                                        //If not a class, unset it
-                                        if ($classExist === FALSE) {
+                                        if(tx_additionalreports_util::isHook($value) === FALSE){
                                             unset($hookList[$key]);
                                         }
                                     }
                                 } else {
                                     $hookList = NULL;
                                 }
-                            } else {
-                                $classExist = FALSE;
-                                //Check if namespace and class exists
-                                if (strpos($hookList, "\\") !== FALSE && class_exists($hookList)) {
-                                    $classExist = TRUE;
-                                }
-
-                                //Check if source php is set and exist
-                                if ($classExist === FALSE && strpos($hookList, ".php") !== FALSE) {
-                                    $valueArray = split(".php", $hookList);
-                                    if (!empty($valueArray) && is_array($valueArray)) {
-                                        $file = \TYPO3\CMS\Core\Utility\GeneralUtility::getFileAbsFileName($valueArray[0].".php");
-                                        if (file_exists($file)) {
-                                            $classExist = TRUE;
-                                        }
-                                    }
-                                }
-
-                                //If not a class, unset it
-                                if ($classExist === FALSE) {
-                                    $hookList = NULL;
-                                }
+                            } else if(tx_additionalreports_util::isHook($hookList) === FALSE){
+                                $hookList = NULL;
                             }
                             
                             if (!empty($hookList)) {
@@ -662,7 +636,7 @@ class tx_additionalreports_main {
 		return $template->renderAllTemplate($markersArray, '###REPORTS_HOOKS###');
 	}
 
-	/**
+        /**
 	 * Generate the global status report
 	 *
 	 * @return string HTML code
