@@ -36,7 +36,7 @@ class tx_additionalreports_main {
 	 * @return string
 	 */
 	public static function getCss() {
-		return t3lib_extMgm::extPath('additional_reports') . 'res/css/tx_additionalreports.css';
+		return t3lib_extMgm::extRelPath('additional_reports') . 'res/css/tx_additionalreports.css';
 	}
 
 	/**
@@ -541,8 +541,8 @@ class tx_additionalreports_main {
 		$markersArray['###LLL:NAME###'] = $GLOBALS['LANG']->getLL('hooks_name');
 		$markersArray['###LLL:FILE###'] = $GLOBALS['LANG']->getLL('hooks_file');
 		$markersArray['###LLL:TITLEEXT###'] = $GLOBALS['LANG']->getLL('hooks_extension');
-		$markersArray['###LLL:EXTENSION###'] = $GLOBALS['LANG']->getLL('extension');
-		$markersArray['###LLL:LINE###'] = $GLOBALS['LANG']->getLL('hooks_line');
+		$markersArray['###LLL:EXTENSION###'] = $GLOBALS['LANG']->getLL('hooks_extensio');
+		$markersArray['###LLL:EXTENSIONNAME###'] = $GLOBALS['LANG']->getLL('hooks_extensionname');
 
 		// core hooks
 		$items = $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS'];
@@ -571,41 +571,87 @@ class tx_additionalreports_main {
 			);
 		}
 
-		// extension hooks (we read the temp_CACHED and look for $EXTCONF modification)
-		$tempCached = tx_additionalreports_util::getCacheFilePrefix() . '_ext_localconf.php';
-		$items = array();
-		if (is_file(PATH_site . 'typo3conf/' . $tempCached)) {
-			$handle = fopen(PATH_site . 'typo3conf/' . $tempCached, 'r');
-			$extension = '';
-			if ($handle) {
-				while (!feof($handle)) {
-					$buffer = fgets($handle);
-					if ($extension != '') {
-						if (preg_match("/\['EXTCONF'\]\['(.*?)'\](.*?)\s*=/", $buffer, $matches)) {
-							if ($matches[1] != $extension) {
-								$items[] = array($extension, $matches[1] . ' --> ' . $matches[2]);
-							}
-						}
-					}
-					if (preg_match('/## EXTENSION: (.*?)$/', $buffer, $matches)) {
-						$extension = $matches[1];
-					}
-				}
-				fclose($handle);
-			}
-		}
+		// extension hooks
+		$items = $GLOBALS['TYPO3_CONF_VARS']['EXTCONF'];
 
 		if (count($items) > 0) {
-			$markersArrayTemp = array();
-			foreach ($items as $itemKey => $itemValue) {
-				$markersArrayTemp[] = array(
-					'###EXTENSION###' => $itemValue[0],
-					'###LINE###'      => $itemValue[1]
-				);
-			}
-			$markersArray['###REPORTS_HOOKS_OBJECTEXT###'] = $template->renderAllTemplate(
-				$markersArrayTemp, '###REPORTS_HOOKS_OBJECTEXT###'
-			);
+                    $markersArrayTemp = array();
+                    foreach ($items as $itemKey => $itemValue) {
+                        foreach ($itemValue as $hookName => $hookList) {
+                            if (is_array($hookList)) {
+                                //Check multidimensional
+                                $dimensionnal = FALSE;
+                                foreach ($hookList as $key => $value) {
+                                    if (is_array($value)) {
+                                        $dimensionnal = TRUE;
+                                        break;
+                                    }
+                                }
+
+                                if ($dimensionnal === FALSE) {
+                                    foreach ($hookList as $key => $value) {
+                                        $classExist = FALSE;
+                                        //Check if namespace and class exists
+                                        if (strpos($value, "\\") !== FALSE && class_exists($value)) {
+                                            $classExist = TRUE;
+                                        }
+
+                                        //Check if source php is set and exist
+                                        if ($classExist === FALSE && strpos($value, ".php") !== FALSE) {
+                                            $valueArray = split(".php", $value);
+                                            if (!empty($valueArray) && is_array($valueArray)) {
+                                                $file = \TYPO3\CMS\Core\Utility\GeneralUtility::getFileAbsFileName($valueArray[0].".php");
+                                                if (file_exists($file)) {
+                                                    $classExist = TRUE;
+                                                }
+                                            }
+                                        }
+
+                                        //If not a class, unset it
+                                        if ($classExist === FALSE) {
+                                            unset($hookList[$key]);
+                                        }
+                                    }
+                                } else {
+                                    $hookList = NULL;
+                                }
+                            } else {
+                                $classExist = FALSE;
+                                //Check if namespace and class exists
+                                if (strpos($hookList, "\\") !== FALSE && class_exists($hookList)) {
+                                    $classExist = TRUE;
+                                }
+
+                                //Check if source php is set and exist
+                                if ($classExist === FALSE && strpos($hookList, ".php") !== FALSE) {
+                                    $valueArray = split(".php", $hookList);
+                                    if (!empty($valueArray) && is_array($valueArray)) {
+                                        $file = \TYPO3\CMS\Core\Utility\GeneralUtility::getFileAbsFileName($valueArray[0].".php");
+                                        if (file_exists($file)) {
+                                            $classExist = TRUE;
+                                        }
+                                    }
+                                }
+
+                                //If not a class, unset it
+                                if ($classExist === FALSE) {
+                                    $hookList = NULL;
+                                }
+                            }
+                            
+                            if (!empty($hookList)) {
+                                $markersArrayTemp[] = array(
+                                    '###EXTENSION###' => $itemKey,
+                                    '###EXTENSIONNAME###' => $hookName,
+                                    '###FILE###' => tx_additionalreports_util::viewArray($hookList)
+                                );
+                            }
+                        }
+                    }
+
+                    $markersArray['###REPORTS_HOOKS_OBJECTEXT###'] = $template->renderAllTemplate(
+                            $markersArrayTemp, '###REPORTS_HOOKS_OBJECTEXT###'
+                    );
 		} else {
 			$markersArray['###REPORTS_HOOKS_OBJECTEXT###'] = $template->renderAllTemplate(
 				array('###NORESULTS###' => $GLOBALS['LANG']->getLL('noresults')),
@@ -625,17 +671,28 @@ class tx_additionalreports_main {
 		$template = new tx_additionalreports_templating();
 		$template->initTemplate(t3lib_extMgm::extPath('additional_reports') . 'res/templates/status.html');
 
+		// infos about typo3 versions
+		$jsonVersions = tx_additionalreports_util::getJsonVersionInfos();
+		$currentVersionInfos = tx_additionalreports_util::getCurrentVersionInfos($jsonVersions);
+		$currentBranch = tx_additionalreports_util::getCurrentBranchInfos($jsonVersions);
+		$latestStable = tx_additionalreports_util::getLatestStableInfos($jsonVersions);
+		$latestLts = tx_additionalreports_util::getLatestLtsInfos($jsonVersions);
+		$headerVersions = $GLOBALS['LANG']->getLL('status_version') . '<br/>';
+		$headerVersions .= $GLOBALS['LANG']->getLL('latestbranch') . '<br/>';
+		$headerVersions .= $GLOBALS['LANG']->getLL('lateststable') . '<br/>';
+		$headerVersions .= $GLOBALS['LANG']->getLL('latestlts');
+		$htmlVersions = TYPO3_version . ' [' . $currentVersionInfos['date'] . ']';
+		$htmlVersions .= '<br/>' . $currentBranch['version'] . ' [' . $currentBranch['date'] . ']';
+		$htmlVersions .= '<br/>' . $latestStable['version'] . ' [' . $latestStable['date'] . ']';
+		$htmlVersions .= '<br/>' . $latestLts['version'] . ' [' . $latestLts['date'] . ']';
+
 		$markersArray = array();
 
 		// TYPO3
-		$content = tx_additionalreports_util::writeInformation(
-			$GLOBALS['LANG']->getLL('status_sitename'), $GLOBALS['TYPO3_CONF_VARS']['SYS']['sitename']
-		);
-		$content .= tx_additionalreports_util::writeInformation($GLOBALS['LANG']->getLL('status_version'), TYPO3_version);
+		$content = tx_additionalreports_util::writeInformation($GLOBALS['LANG']->getLL('status_sitename'), $GLOBALS['TYPO3_CONF_VARS']['SYS']['sitename']);
+		$content .= tx_additionalreports_util::writeInformation($headerVersions, $htmlVersions);
 		$content .= tx_additionalreports_util::writeInformation($GLOBALS['LANG']->getLL('status_path'), PATH_site);
-		$content .= tx_additionalreports_util::writeInformation('TYPO3_db', TYPO3_db);
-		$content .= tx_additionalreports_util::writeInformation('TYPO3_db_username', TYPO3_db_username);
-		$content .= tx_additionalreports_util::writeInformation('TYPO3_db_host', TYPO3_db_host);
+		$content .= tx_additionalreports_util::writeInformation('TYPO3_db<br/>TYPO3_db_username<br/>TYPO3_db_host', TYPO3_db . '<br/>' . TYPO3_db_username . '<br/>' . TYPO3_db_host);
 		if ($GLOBALS['TYPO3_CONF_VARS']['GFX']['im_path'] != '') {
 			$cmd = t3lib_div::imageMagickCommand('convert', '-version');
 			exec($cmd, $ret);
@@ -1027,9 +1084,13 @@ class tx_additionalreports_main {
 			$markersArrayTemp[] = $markersExt;
 		}
 
-		$markersArray['###REPORTS_PLUGINS_USEDPLUGINS_OBJECT###'] = $template->renderAllTemplate(
-			$markersArrayTemp, '###REPORTS_PLUGINS_USEDPLUGINS_OBJECT###'
-		);
+		if (!empty($markersArrayTemp)) {
+			$markersArray['###REPORTS_PLUGINS_USEDPLUGINS_OBJECT###'] = $template->renderAllTemplate(
+				$markersArrayTemp, '###REPORTS_PLUGINS_USEDPLUGINS_OBJECT###'
+			);
+		} else {
+			return $markersArray['###PAGEBROWSER###'];
+		}
 
 		$content = $template->renderAllTemplate($markersArray, '###REPORTS_PLUGINS_USEDPLUGINS###');
 
@@ -1224,9 +1285,14 @@ class tx_additionalreports_main {
 
 			$markersArrayTemp[] = $markersExt;
 		}
-		$markersArray['###REPORTS_PLUGINS_USEDCTYPES_OBJECT###'] = $template->renderAllTemplate(
-			$markersArrayTemp, '###REPORTS_PLUGINS_USEDCTYPES_OBJECT###'
-		);
+
+		if (!empty($markersArrayTemp)) {
+			$markersArray['###REPORTS_PLUGINS_USEDCTYPES_OBJECT###'] = $template->renderAllTemplate(
+				$markersArrayTemp, '###REPORTS_PLUGINS_USEDCTYPES_OBJECT###'
+			);
+		} else {
+			return $markersArray['###PAGEBROWSER###'];
+		}
 
 		$content = $template->renderAllTemplate($markersArray, '###REPORTS_PLUGINS_USEDCTYPES###');
 
