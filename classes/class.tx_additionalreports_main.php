@@ -542,7 +542,7 @@ class tx_additionalreports_main {
 		$markersArray['###LLL:FILE###'] = $GLOBALS['LANG']->getLL('hooks_file');
 		$markersArray['###LLL:TITLEEXT###'] = $GLOBALS['LANG']->getLL('hooks_extension');
 		$markersArray['###LLL:EXTENSION###'] = $GLOBALS['LANG']->getLL('extension');
-		$markersArray['###LLL:LINE###'] = $GLOBALS['LANG']->getLL('hooks_line');
+		$markersArray['###LLL:EXTENSIONNAME###'] = $GLOBALS['LANG']->getLL('hooks_extensionname');
 
 		// core hooks
 		$items = $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS'];
@@ -552,11 +552,23 @@ class tx_additionalreports_main {
 			foreach ($items as $itemKey => $itemValue) {
 				if (preg_match('/.*?\/.*?\.php/', $itemKey, $matches)) {
 					foreach ($itemValue as $hookName => $hookList) {
-						$markersArrayTemp[] = array(
-							'###COREFILE###' => $itemKey,
-							'###NAME###'     => $hookName,
-							'###FILE###'     => tx_additionalreports_util::viewArray($hookList)
-						);
+                                            if(is_array($hookList)){
+                                                foreach ($hookList as $key => $value) {
+                                                    if(tx_additionalreports_util::isHook($value) === FALSE){
+                                                        unset($hookList[$key]);
+                                                    }
+                                                }
+                                            } else if(tx_additionalreports_util::isHook($hookList) === FALSE) {
+                                                $hookList = NULL;
+                                            }
+                                            
+                                            if (!empty($hookList)) {
+                                                    $markersArrayTemp[] = array(
+                                                                '###COREFILE###' => $itemKey,
+                                                                '###NAME###'     => $hookName,
+                                                                '###FILE###'     => tx_additionalreports_util::viewArray($hookList)
+                                                        );
+                                            }
 					}
 				}
 			}
@@ -571,41 +583,49 @@ class tx_additionalreports_main {
 			);
 		}
 
-		// extension hooks (we read the temp_CACHED and look for $EXTCONF modification)
-		$tempCached = tx_additionalreports_util::getCacheFilePrefix() . '_ext_localconf.php';
-		$items = array();
-		if (is_file(PATH_site . 'typo3conf/' . $tempCached)) {
-			$handle = fopen(PATH_site . 'typo3conf/' . $tempCached, 'r');
-			$extension = '';
-			if ($handle) {
-				while (!feof($handle)) {
-					$buffer = fgets($handle);
-					if ($extension != '') {
-						if (preg_match("/\['EXTCONF'\]\['(.*?)'\](.*?)\s*=/", $buffer, $matches)) {
-							if ($matches[1] != $extension) {
-								$items[] = array($extension, $matches[1] . ' --> ' . $matches[2]);
-							}
-						}
-					}
-					if (preg_match('/## EXTENSION: (.*?)$/', $buffer, $matches)) {
-						$extension = $matches[1];
-					}
-				}
-				fclose($handle);
-			}
-		}
+		// extension hooks
+		$items = $GLOBALS['TYPO3_CONF_VARS']['EXTCONF'];
 
 		if (count($items) > 0) {
-			$markersArrayTemp = array();
-			foreach ($items as $itemKey => $itemValue) {
-				$markersArrayTemp[] = array(
-					'###EXTENSION###' => $itemValue[0],
-					'###LINE###'      => $itemValue[1]
-				);
-			}
-			$markersArray['###REPORTS_HOOKS_OBJECTEXT###'] = $template->renderAllTemplate(
-				$markersArrayTemp, '###REPORTS_HOOKS_OBJECTEXT###'
-			);
+                    $markersArrayTemp = array();
+                    foreach ($items as $itemKey => $itemValue) {
+                        foreach ($itemValue as $hookName => $hookList) {
+                            if (is_array($hookList)) {
+                                //Check multidimensional
+                                $dimensionnal = FALSE;
+                                foreach ($hookList as $key => $value) {
+                                    if (is_array($value)) {
+                                        $dimensionnal = TRUE;
+                                        break;
+                                    }
+                                }
+
+                                if ($dimensionnal === FALSE) {
+                                    foreach ($hookList as $key => $value) {
+                                        if(tx_additionalreports_util::isHook($value) === FALSE){
+                                            unset($hookList[$key]);
+                                        }
+                                    }
+                                } else {
+                                    $hookList = NULL;
+                                }
+                            } else if(tx_additionalreports_util::isHook($hookList) === FALSE){
+                                $hookList = NULL;
+                            }
+                            
+                            if (!empty($hookList)) {
+                                $markersArrayTemp[] = array(
+                                    '###EXTENSION###' => $itemKey,
+                                    '###EXTENSIONNAME###' => $hookName,
+                                    '###FILE###' => tx_additionalreports_util::viewArray($hookList)
+                                );
+                            }
+                        }
+                    }
+
+                    $markersArray['###REPORTS_HOOKS_OBJECTEXT###'] = $template->renderAllTemplate(
+                            $markersArrayTemp, '###REPORTS_HOOKS_OBJECTEXT###'
+                    );
 		} else {
 			$markersArray['###REPORTS_HOOKS_OBJECTEXT###'] = $template->renderAllTemplate(
 				array('###NORESULTS###' => $GLOBALS['LANG']->getLL('noresults')),

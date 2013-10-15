@@ -1107,7 +1107,33 @@ class tx_additionalreports_util {
 	public static function getLatestLtsInfos($jsonVersions) {
 		$currentVersion = explode('.', $jsonVersions['latest_lts']);
 		return $jsonVersions[$currentVersion[0] . '.' . $currentVersion[1]]['releases'][$jsonVersions['latest_lts']];
-	}
+	}        
+        
+        /**
+         * 
+         * @param string $hook
+         * @return boolean
+         */
+        public static function isHook($hook) {
+            $isHook = FALSE;
+            
+            if (!empty($hook)) {
+                //Check if namespace and class exists
+                if (strpos($hook, "\\") !== FALSE && class_exists($hook)) {
+                    $isHook = TRUE;
+                } else if (strpos($hook, ".php") !== FALSE) {
+                    $hookArray = split(".php", $hook);
+                    if (!empty($hookArray) && is_array($hookArray)) {
+                        $file = \TYPO3\CMS\Core\Utility\GeneralUtility::getFileAbsFileName($hookArray[0] . ".php");
+                        if (file_exists($file)) {
+                            $isHook = TRUE;
+                        }
+                    }
+                }
+            }
+
+            return $isHook;
+        }
 }
 
 ?>

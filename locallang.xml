@@ -64,6 +64,7 @@
             <label index="websitesconf_description">Check the conf of websites and domains.</label>
             <label index="hooks_core">Core hooks</label>
             <label index="hooks_extension">Extension hooks (experimental)</label>
+            <label index="hooks_extensionname">Hook name</label>
             <label index="hooks_corefile">Core file</label>
             <label index="hooks_name">Hook name</label>
             <label index="hooks_file">File or class</label>
