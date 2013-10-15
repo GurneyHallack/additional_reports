@@ -541,7 +541,7 @@ class tx_additionalreports_main {
 		$markersArray['###LLL:NAME###'] = $GLOBALS['LANG']->getLL('hooks_name');
 		$markersArray['###LLL:FILE###'] = $GLOBALS['LANG']->getLL('hooks_file');
 		$markersArray['###LLL:TITLEEXT###'] = $GLOBALS['LANG']->getLL('hooks_extension');
-		$markersArray['###LLL:EXTENSION###'] = $GLOBALS['LANG']->getLL('hooks_extensio');
+		$markersArray['###LLL:EXTENSION###'] = $GLOBALS['LANG']->getLL('extension');
 		$markersArray['###LLL:EXTENSIONNAME###'] = $GLOBALS['LANG']->getLL('hooks_extensionname');
 
 		// core hooks

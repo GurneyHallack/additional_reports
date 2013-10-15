@@ -1109,8 +1109,6 @@ class tx_additionalreports_util {
 		return $jsonVersions[$currentVersion[0] . '.' . $currentVersion[1]]['releases'][$jsonVersions['latest_lts']];
 	}
         
-        
-        
         /**
          * 
          * @param string $hook
@@ -1118,6 +1116,7 @@ class tx_additionalreports_util {
          */
         public static function isHook($hook) {
             $isHook = FALSE;
+            
             if (!empty($hook)) {
                 //Check if namespace and class exists
                 if (strpos($hook, "\\") !== FALSE && class_exists($hook)) {
