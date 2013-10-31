@@ -552,18 +552,10 @@ class tx_additionalreports_main {
 			foreach ($items as $itemKey => $itemValue) {
 				if (preg_match('/.*?\/.*?\.php/', $itemKey, $matches)) {
 					foreach ($itemValue as $hookName => $hookList) {
-                                            if(is_array($hookList)){
-                                                foreach ($hookList as $key => $value) {
-                                                    if(tx_additionalreports_util::isHook($value) === FALSE){
-                                                        unset($hookList[$key]);
-                                                    }
-                                                }
-                                            } else if(tx_additionalreports_util::isHook($hookList) === FALSE) {
-                                                $hookList = NULL;
-                                            }
-                                            
-                                            if (!empty($hookList)) {
-                                                    $markersArrayTemp[] = array(
+                                            $hookList = tx_additionalreports_util::getHook($hookList);
+
+                        if (!empty($hookList)) {
+                            $markersArrayTemp[] = array(
                                                                 '###COREFILE###' => $itemKey,
                                                                 '###NAME###'     => $hookName,
                                                                 '###FILE###'     => tx_additionalreports_util::viewArray($hookList)
@@ -590,31 +582,10 @@ class tx_additionalreports_main {
                     $markersArrayTemp = array();
                     foreach ($items as $itemKey => $itemValue) {
                         foreach ($itemValue as $hookName => $hookList) {
-                            if (is_array($hookList)) {
-                                //Check multidimensional
-                                $dimensionnal = FALSE;
-                                foreach ($hookList as $key => $value) {
-                                    if (is_array($value)) {
-                                        $dimensionnal = TRUE;
-                                        break;
-                                    }
-                                }
+                            $hookList = tx_additionalreports_util::getHook($hookList);
 
-                                if ($dimensionnal === FALSE) {
-                                    foreach ($hookList as $key => $value) {
-                                        if(tx_additionalreports_util::isHook($value) === FALSE){
-                                            unset($hookList[$key]);
-                                        }
-                                    }
-                                } else {
-                                    $hookList = NULL;
-                                }
-                            } else if(tx_additionalreports_util::isHook($hookList) === FALSE){
-                                $hookList = NULL;
-                            }
-                            
-                            if (!empty($hookList)) {
-                                $markersArrayTemp[] = array(
+                    if (!empty($hookList)) {
+                        $markersArrayTemp[] = array(
                                     '###EXTENSION###' => $itemKey,
                                     '###EXTENSIONNAME###' => $hookName,
                                     '###FILE###' => tx_additionalreports_util::viewArray($hookList)
