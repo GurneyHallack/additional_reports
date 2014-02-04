@@ -1268,81 +1268,83 @@ class tx_additionalreports_util {
 	}
         
         /**
-         * Check if string given is hook
-         *
-         * @param string $hook
-         * @return boolean
-         */
-        public static function isHook($hook) {
-            $isHook = FALSE;
-            
-            if (!empty($hook)) {
-                //Check class exists
-                if (class_exists($hook)) {
-                    $isHook = TRUE;
-                    //Check if namespace and class exists
-                    } else if (strpos($hook, "\\") !== FALSE && class_exists($hook)) {
-                    $isHook = TRUE;
-                //Check if file.php is used
-                } else if (strpos($hook, ".php") !== FALSE) {
-                    $hookArray = explode(".php", $hook);
-                    if (!empty($hookArray) && is_array($hookArray)) {
-                        $file = t3lib_div::getFileAbsFileName($hookArray[0] . ".php");
-                        if (file_exists($file)) {
-                            $isHook = TRUE;
-                        }
-                    }
-                //Check if function is used
-                } else if ($isHook === FALSE && strpos($hook, "->") !== FALSE) {
-                    $hookArray = explode("->", $hook);
-                    if (!empty($hookArray) && is_array($hookArray)) {
-                        if (class_exists($hookArray[0])) {
-                            $isHook = TRUE;
-                        }
-                    }
-                }
-            }
+        * Check if string given is hook
+        *
+        * @param string $hook
+        * @return boolean
+        */
+       public static function isHook($hook) {
+           $isHook = FALSE;
+           if (!empty($hook)) {
+               //Check class exists
+               if (class_exists($hook)) {
+                   $isHook = TRUE;
+                   
+               } //Check if namespace and class exists 
+               else if (strpos($hook, "\\") !== FALSE && class_exists($hook)) {
+                   $isHook = TRUE;
+                   
+               } //Check if file.php is used 
+               else if (strpos($hook, ".php") !== FALSE) {
+                   $hookArray = explode(".php", $hook);
+                   if (!empty($hookArray) && is_array($hookArray)) {
+                       $file = t3lib_div::getFileAbsFileName($hookArray[0] . ".php");
+                       if (file_exists($file)) {
+                           $isHook = TRUE;
+                       }
+                   }
+               }
+               //Check if function is used
+               if ($isHook === FALSE && strpos($hook, "->") !== FALSE) {
+                   $hookArray = explode("->", $hook);
+                   if (!empty($hookArray) && is_array($hookArray)) {
+                       if (class_exists($hookArray[0])) {
+                           $isHook = TRUE;
+                       }
+                   }
+               }
+           }
 
-            return $isHook;
-        }
+           return $isHook;
+       }
 
-    /**
-     * Get the string from potential array and test it
-     * 
-     * @param string|array $hookPotential
-     * @return null|$hookPotential
-     * @see self::isHook
-     */
-    public static function getHook($hookPotential) {
-        //If is array
-        if (is_array($hookPotential)) {
-            foreach ($hookPotential as $key => $value) {
-                //if array nested
-                if (is_array($value)) {
-                    foreach ($value as $keySecond => $valueSecond) {
-                        //stop allowing array nested
-                        if (is_array($valueSecond)) {
-                            unset($value[$keySecond]);
-                        } else if (self::isHook($valueSecond) === FALSE) {
-                            unset($value[$keySecond]);
-                        }
-                    }
-                } else if (self::isHook($value) === FALSE) {
-                    $value = NULL;
-                }
-                
-                if(empty($value)) {
-                    unset($hookPotential[$key]);
-                } else {
-                    $hookPotential[$key] = $value;
-                }
-            }
-        } else if (self::isHook($hookPotential) === FALSE) {
-            $hookPotential = NULL;
-        }
+       /**
+        * Get the string from potential array and test it
+        * 
+        * @param string|array $hookPotential
+        * @return null|array
+        * @see self::isHook
+        */
+       public static function getHook($hookPotential) {
+           //If is array
+           if (is_array($hookPotential)) {
+               foreach ($hookPotential as $key => $value) {
+                   //if array nested
+                   if (is_array($value)) {
+                       foreach ($value as $keySecond => $valueSecond) {
+                           //stop allowing array nested
+                           if (is_array($valueSecond)) {
+                               unset($value[$keySecond]);
+                           } else if (self::isHook($valueSecond) === FALSE) {
+                               unset($value[$keySecond]);
+                           }
+                       }
+                   } else if (self::isHook($value) === FALSE) {
+                       $value = NULL;
+                   }
 
-        return $hookPotential;
-    }
+                   if (empty($value)) {
+                       unset($hookPotential[$key]);
+                   } else {
+                       $hookPotential[$key] = $value;
+                   }
+               }
+           } else if (self::isHook($hookPotential) === FALSE) {
+               $hookPotential = NULL;
+           }
+
+           return $hookPotential;
+       }
 
 }
 

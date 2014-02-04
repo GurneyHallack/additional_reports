@@ -320,62 +320,46 @@ class tx_additionalreports_main {
 	 * @return string HTML code
 	 */
 	public function displayHooks() {
-		$hooks = array();
+                $hooks = array();
 
-		// core hooks
-		$items = $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS'];
-		if (count($items) > 0) {
-			foreach ($items as $itemKey => $itemValue) {
-				if (preg_match('/.*?\/.*?\.php/', $itemKey, $matches)) {
-					foreach ($itemValue as $hookName => $hookList) {
-						$hooks['core'][] = array(
-							'corefile' => $itemKey,
-							'name'     => $hookName,
-							'file'     => tx_additionalreports_util::viewArray($hookList)
-						);
-					}
-				}
-			}
-		}
+                // core hooks
+                $items = $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS'];
+                if (count($items) > 0) {
+                    foreach ($items as $itemKey => $itemValue) {
+                        if (preg_match('/.*?\/.*?\.php/', $itemKey, $matches)) {
+                            foreach ($itemValue as $hookName => $hookList) {
+                                $hookList = tx_additionalreports_util::getHook($hookList);
 
-		if (count($items) > 0) {
-			$markersArrayTemp = array();
-			foreach ($items as $itemKey => $itemValue) {
-				if (preg_match('/.*?\/.*?\.php/', $itemKey, $matches)) {
-					foreach ($itemValue as $hookName => $hookList) {
-                                            $hookList = tx_additionalreports_util::getHook($hookList);
+                                if (!empty($hookList)) {
+                                    $hooks['core'][] = array(
+                                        'corefile' => $itemKey,
+                                        'name' => $hookName,
+                                        'file' => tx_additionalreports_util::viewArray($hookList)
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
 
-                                            if (!empty($hookList)) {
-                                                $hooks['core'][] = array(
-                                                                'corefile' => $itemKey,
-                                                                'name'     => $hookName,
-                                                                'file'     => tx_additionalreports_util::viewArray($hookList)
-                                                        );
-                                            }
-					}
-				}
-			}
-		}
-                
                 $items = $GLOBALS['TYPO3_CONF_VARS']['EXTCONF'];
-		if (count($items) > 0) {
-                    $markersArrayTemp = array();
+                if (count($items) > 0) {
                     foreach ($items as $itemKey => $itemValue) {
                         foreach ($itemValue as $hookName => $hookList) {
                             $hookList = tx_additionalreports_util::getHook($hookList);
 
                             if (!empty($hookList)) {
                                 $hooks['extensions'][] = array(
-                                    'extension' => $itemKey,
-                                    'extensionname' => $hookName,
+                                    'corefile' => $itemKey,
+                                    'name' => $hookName,
                                     'file' => tx_additionalreports_util::viewArray($hookList)
                                 );
                             }
                         }
                     }
-		}
+                }
 
-		$view = t3lib_div::makeInstance('Tx_Fluid_View_StandaloneView');
+                $view = t3lib_div::makeInstance('Tx_Fluid_View_StandaloneView');
 		$view->setTemplatePathAndFilename(t3lib_extMgm::extPath('additional_reports') . 'Resources/Private/Templates/hooks-fluid.html');
 		$view->assign('hooks', $hooks);
 		return $view->render();
